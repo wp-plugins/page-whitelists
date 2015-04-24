@@ -8,8 +8,8 @@ class WL_Access_Manager {
 	}
 			
 	function on_edit_page_form() {
-		if ( ! function_exists('get_current_screen') || ! is_admin() || !current_user_can( 'edit_pages' ) ) return false;
-		$s = get_current_screen();	
+		if (!function_exists('get_current_screen') || ! is_admin() || !current_user_can( 'edit_pages' ) ) return false;		
+		$s = get_current_screen();
 		return ($s instanceof WP_Screen && $s->id === 'page');
 	}
 	
