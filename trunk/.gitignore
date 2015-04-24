@@ -1,0 +1,12 @@
+*.class
+*.pyc
+*.pyo
+.project
+.settings
+travis.yml
+phpunit.xml
+notes.txt
+bin/
+bin
+*~
+
