@@ -12,8 +12,20 @@ class WL_Admin {
 		$this->data = $data;
 	}
 	
+	public function admin_setup() {
+		add_action('add_meta_boxes', array($this, 'add_metabox'));
+		add_action('save_post', array($this, 'save_metabox'));
+		add_action('admin_menu',array($this, 'add_menus'));
+		add_action('admin_enqueue_scripts',array($this,'enqueue_assets'));
+		add_action('admin_init',array($this,'register_ajax'));
+		add_action('manage_users_columns',array($this,'user_column_header'));
+		add_action('manage_users_custom_column',array($this,'user_column_content'),10,3);
+		add_action('edit_user_profile', array($this,'profile_field'));
+		add_action('edit_user_profile_update', array($this,'profile_field_update'));
+	}
 	
-	public function add_menus() {
+	
+	function add_menus() {
 		//$plugin_title = __("Page Whitelists",'page-whitelists');
 		$plugin_title = "Page Whitelists";
 		
@@ -28,12 +40,12 @@ class WL_Admin {
 		);	
 	}
 	
-	public function render_lists_page() {
+	function render_lists_page() {
 		$lists = $this->data->get_all_whitelists();
 		require_once $this->template_path."lists_page.php";
 	}
 	
-	public function add_metabox() {
+	function add_metabox() {
 		if (!current_user_can('manage_options')) return;
 		add_meta_box(
 			'wlist-metabox',
@@ -44,13 +56,13 @@ class WL_Admin {
 		);
 	}
 	
-	public function render_metabox($post) {
+	function render_metabox($post) {
 		wp_nonce_field(-1,'wlist_onpage_edit');
 		$all_wlists = $this->data->get_all_whitelists();
 		require_once $this->template_path."metabox.php";		
 	}
 	
-	public function save_metabox($page_id) {
+	function save_metabox($page_id) {
 		if (!isset( $_POST['wlist_onpage_edit'])) {
 			return;
 		} //nonce not set
@@ -75,10 +87,49 @@ class WL_Admin {
 			}
 		}
 	}
+
+	function user_column_header($column_headers) {
+		$column_headers['whitelists'] = _x('Assigned Whitelists','user table column','page-whitelists');
+  		return $column_headers;
+	}
+	
+	function user_column_content($value,$column_name,$user_id) {
+		if ($column_name == 'whitelists') {
+			$whitelists = $this->data->get_user_whitelists($user_id);
+			$listnames = array();
+			$output = "";
+			foreach ($whitelists as $whitelist) {
+				$listnames[] = $whitelist->get_name();
+			}
+			if (sizeof($listnames)!=0) {
+				$output = implode(", ", $listnames); 
+			}
+			return $output;
+		}
+		return $value;
+	}
+	
+	function profile_field($user) {
+		if (!current_user_can("manage_options")) return;
+		$whitelists = $this->data->get_all_whitelists();
+		require_once $this->template_path."profile_field.php";
+	}
+	
+	function profile_field_update($user_id) {
+		$whitelists = $this->data->get_all_whitelists();
+		$assigned_wlists = $_POST['wl_assigned_whitelists'];
+		foreach ($whitelists as $wlist) {
+			if (in_array($wlist->get_id(),$assigned_wlists)) {
+				$wlist->add_user($user_id);
+			} else {
+				$wlist->remove_user($user_id);
+			}
+		}
+	}
 	
 	/***************** SCRIPTS AND STYLES **********************/
 	
-	public function enqueue_assets($hook) {
+	function enqueue_assets($hook) {
 		$screen = get_current_screen();
 		if($screen->id != 'settings_page_wl_lists') {
 			return;
@@ -95,21 +146,23 @@ class WL_Admin {
 			'assignedTo' => __('Assigned to users','page-whitelists'),
 			'asToUsers' => __('Assigned to users','page-whitelists'),
 			'asToRoles' => __('Assigned to roles','page-whitelists'),
-			'cancel' => __('Cancel','page-whitelists'),
+			'cancel' => _x('Cancel','cancel editing/creating whitelist','page-whitelists'),
 			'save' => __('Save','page-whitelists'),
 			'createNew' => __('Create new...','page-whitelists'),
 			'edit' => __('Edit','page-whitelists'),
-			'saveWNameErr' => __('cannot save a whitelist without a name.','page-whitelists'),
+			'saveWNameErr' => __('Cannot save a whitelist without a name.','page-whitelists'),
 			'createdSuccess' => __('Whitelist successfully created.','page-whitelists'),
 			'editedSuccess' => __('Whitelist successfully edited.','page-whitelists'),
 			'deletedSuccess' => __('Whitelist successfully deleted.','page-whitelists'),
 			'err' => __('Error.','page-whitelists'),
 			'confirmLeave' => __('You have unsaved changes. Do you want to continue?','page-whitelists'),
 			'confirmDelete' => __('Are you sure you want to delete whitelist {listName}?','page-whitelists'),
-) );
+			'selectAll' => __('select all','page-whitelists'),
+			'selectNone' => __('select none','page-whitelists'),
+		) );
 	}
 	
-	public function register_ajax() {
+	function register_ajax() {
 		add_action('wp_ajax_wl_delete', array($this,'ajax_delete'));
 		add_action('wp_ajax_wl_load', array($this,'ajax_load'));
 		add_action('wp_ajax_wl_save', array($this,'ajax_save'));
@@ -117,7 +170,7 @@ class WL_Admin {
 	
 	/***************** AJAX **********************/
 	
-	public function ajax_delete() {
+	function ajax_delete() {
 		if (!current_user_can("manage_options")) die('user not allowed to edit settings');
 		$id = $_POST['id'];
 		$passed = check_ajax_referer( 'delete-wlist-'.$id, 'nonce', false);
@@ -131,7 +184,7 @@ class WL_Admin {
 		die($reply);
 	}
 	
-	public function ajax_load() {
+	function ajax_load() {
 		//FIRST STEP: build a "fresh" data array
 		$data = array();
 		$data['pages'] = array();
@@ -153,7 +206,7 @@ class WL_Admin {
 		$user_query = new WP_User_Query($query_args); 
 		$users = $user_query->results;
 		foreach($users as $user) {
-			if (!user_can($user,"manage_options")) {
+			if (!user_can($user,"manage_options") && user_can($user,'edit_pages')) {
 				$data['users'][] = array(
 					'login' => $user->user_login,
 					'id' => $user->ID,
@@ -165,7 +218,7 @@ class WL_Admin {
 		$all_roles = get_editable_roles();
 		$data['roles'] = array();
 		foreach ($all_roles as $rolename=>$roledata) {
-			if (!isset($roledata['capabilities']['manage_options'])) {
+			if (!isset($roledata['capabilities']['manage_options']) && isset($roledata['capabilities']['edit_pages'])) {
 				$data['roles'][$rolename] = false;	
 			}
 		}
@@ -206,7 +259,7 @@ class WL_Admin {
 		die(json_encode($data)); 		
 	}
 	
-	public function ajax_save() {
+	function ajax_save() {
 		try {
 			if (!current_user_can("manage_options")) {
 				throw new Exception("insufficient capabilities");

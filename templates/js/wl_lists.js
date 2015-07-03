@@ -34,18 +34,18 @@ function throwNotice(success,message) {
 
 function buildEditWindow(data,line,id) {
 	//console.log(data);
-	titleHtml = '<fieldset class="inline-edit-col" id="title-block"><h4></h4><div class="inline-edit-col"><label class="left"><span class="title">'+jsi18n.title+'</span><span class="input-text-wrap"><input type="text" name="wlist_title" id="wlist-title" value=""></span></label><label class="right"><span>'+jsi18n.allowNew+'</span><span><input type="checkbox" name="wlist_strict" id="wlist-strict" value=""></span></label></div></fieldset>';
-	pagesHtml = '<fieldset class="inline-edit-col-left wl-col"><div class="inline-edit-col"><span class="title">'+jsi18n.wlistedPages+'</span><ul class="cat-checklist" id="pages-list"></ul></div></fieldset>';
-	usersHtml = '<fieldset class="inline-edit-col-center wl-col"><div class="inline-edit-col"><span class="title">'+jsi18n.asToUsers+'</span><ul class="cat-checklist" id="users-list"></ul></div></fieldset>';
-	rolesHtml = '<fieldset class="inline-edit-col-right wl-col"><div class="inline-edit-col"><span class="title">'+jsi18n.asToRoles+'</span><ul class="cat-checklist" id="roles-list"></ul></div></fieldset>';
-	bottomHtml = '<p class="submit inline-edit-save"><a accesskey="c" href="#" class="button-secondary cancel alignleft" id="wlist-edit-cancel">'+jsi18n.cancel+'</a><a accesskey="s" href="#" id="wlist-edit-save" class="button-primary save alignright">'+jsi18n.save+'</a><span class="error" style="display:none"></span><br class="clear"></p>';
+	var titleHtml = '<fieldset class="inline-edit-col" id="title-block"><h4></h4><div class="inline-edit-col"><label class="left"><span class="title">'+jsi18n.title+'</span><span class="input-text-wrap"><input type="text" name="wlist_title" id="wlist-title" value=""></span></label><label class="right"><span>'+jsi18n.allowNew+'</span><span><input type="checkbox" name="wlist_strict" id="wlist-strict" value=""></span></label></div></fieldset>';
+	var pagesHtml = '<fieldset class="inline-edit-col-left wl-col"><div class="inline-edit-col"><span class="title">'+jsi18n.wlistedPages+'</span><ul class="cat-checklist" id="pages-list"></ul></div><div class="all-none"><a href="" class="select-all">'+jsi18n.selectAll+'</a>/<a href="" class="select-none">'+jsi18n.selectNone+'</a></div></fieldset>';
+	var usersHtml = '<fieldset class="inline-edit-col-center wl-col"><div class="inline-edit-col"><span class="title">'+jsi18n.asToUsers+'</span><ul class="cat-checklist" id="users-list"></ul></div></fieldset>';
+	var rolesHtml = '<fieldset class="inline-edit-col-right wl-col"><div class="inline-edit-col"><span class="title">'+jsi18n.asToRoles+'</span><ul class="cat-checklist" id="roles-list"></ul></div></fieldset>';
+	var bottomHtml = '<p class="submit inline-edit-save"><a accesskey="c" href="#" class="button-secondary cancel alignleft" id="wlist-edit-cancel">'+jsi18n.cancel+'</a><a accesskey="s" href="#" id="wlist-edit-save" class="button-primary save alignright">'+jsi18n.save+'</a><span class="error" style="display:none"></span><br class="clear"></p>';
 	editWindow = $('<tr id="wlist-form" class="inline-edit-row quick-edit-row inline-editor" style=""><td colspan="6" class="colspanchange">'+titleHtml+pagesHtml+rolesHtml+usersHtml+bottomHtml+'</td></tr>');
 	if (data.strict) {
 		editWindow.find("#wlist-strict").prop('checked',false);
 	} else if (!data.strict) {
 		editWindow.find("#wlist-strict").prop('checked',true);
 	}
-	usersList = editWindow.find("#users-list");
+	var usersList = editWindow.find("#users-list");
 	$.each(data.users,function(key,user){
 		var item = $('<li id="user-'+user.id+'"><label class="selectit"><input value="'+user.id+'" type="checkbox" name="users[]" id="user-id-'+user.id+'"> '+user.login+'</label></li>');
 		if (user.assigned) {
@@ -54,7 +54,7 @@ function buildEditWindow(data,line,id) {
 		usersList.append(item);
 	});
 	
-	rolesList = editWindow.find("#roles-list");
+	var rolesList = editWindow.find("#roles-list");
 	$.each(data.roles,function(role,value){
 		var item = $('<li id="role-'+role+'"><label class="selectit"><input value="'+role+'" type="checkbox" name="roles[]" id="role-'+role+'"> '+role+'</label></li>');
 		if (value) {
@@ -63,7 +63,7 @@ function buildEditWindow(data,line,id) {
 		rolesList.append(item);
 	});
 	
-	pagesList = editWindow.find("#pages-list");
+	var pagesList = editWindow.find("#pages-list");
 	$.each(data.pages, function(key,page){
 		var item = $('<li id="page-'+page.id+'"><label class="selectit"><input value="'+page.id+'" type="checkbox" name="pages[]" id="page-id-'+page.id+'"> '+page.title+' ('+page.id+')</label></li>');
 		if (page.assigned) {
@@ -71,12 +71,28 @@ function buildEditWindow(data,line,id) {
 		}
 		pagesList.append(item);
 	});
+	
+	
+	editWindow.find(".all-none .select-all").click(function(e){
+		//select all 
+		$("#pages-list li input").prop('checked',true);
+		e.preventDefault();
+	});
+	
+	editWindow.find(".all-none .select-none").click(function(e){
+		//select none
+		$("#pages-list li input").prop('checked',false);
+		e.preventDefault();
+	});
+	
 	var titleInput = editWindow.find("#wlist-title");
 	var idInput = editWindow.find("#wlist-id");
 	var editWindowTitle = editWindow.find("h4"); 
 	if (line===undefined) {
 		editWindowTitle.text(jsi18n.createNew);
 		editWindow.appendTo("#wl-lists tbody");
+		editWindow.get(0).scrollIntoView();
+		$(document).scrollTop(editWindow.offset().top-$("#wpadminbar").height());
 		$("#wlist-edit-cancel").click(function(){
 			spinner.tackRight(editWindowTitle);
 			editWindow.remove();
@@ -96,17 +112,18 @@ function buildEditWindow(data,line,id) {
 			//maybe scroll up again?
 			spinner.tackRight(editWindowTitle);
 			editWindow.replaceWith(line);
+			window.location.hash = "";
 			editing=false;
 		});
 	}
 	
-	$("#wlist-edit-save").click(function(){
+	$("#wlist-edit-save").click(function(e){
 		spinner.tackRight(editWindowTitle);
 		if (titleInput.attr("value")=='') {
 			throwNotice(false,jsi18n.saveWNameErr);
 			//spinner.tearOff();
 			//inform user somehow
-			return false;
+			return true;
 		}
 		var pagesArray = [];
 		pagesList.find('input:checked').each(function(key,item){
@@ -137,6 +154,7 @@ function buildEditWindow(data,line,id) {
 				error: function() {
 						var message = "Server error";
 						throwNotice(false,result.message);
+						window.location.hash = "";
 					},
 				success: function(response) {
 					result = $.parseJSON(response);
@@ -163,17 +181,18 @@ function buildEditWindow(data,line,id) {
 						throwNotice(false,result.message);
 					}
 					spinner.tearOff();
+					window.location.hash = "";
 				}
 		   
 		});
-		return false;
+		e.preventDefault();
 		
 	});	
 	
 }
 
 
-function createWlist(e) {
+function createWlist() {
 	if (editing) {
 		//already editing/creating
 		answer = confirm(jsi18n.confirmLeave);
@@ -187,7 +206,7 @@ function createWlist(e) {
 	} else {
 		editing = true;
 	}
-	spinner.tackRight($(e.currentTarget));
+	spinner.tackRight($("#create-wlist"));
 	$.ajax({ 
 	    type: 'POST', 
 	    url: ajaxurl, 
@@ -197,17 +216,16 @@ function createWlist(e) {
 	    dataType: 'json',
 	    success: function(response) { 
 	    	spinner.tearOff();
-	        buildEditWindow(response);			
+	        buildEditWindow(response);
+	        window.location.hash = "#new";			
 	    }   
 	});
 	//get data from AJAX
 	//build editor
 	//
-	
-	return false;
 }
 
-function editWlist(e) {
+function editWlist(clicked) {
 	if (editing) {		
 		answer = confirm(jsi18n.confirmLeave);
 		if (!answer) {
@@ -218,14 +236,13 @@ function editWlist(e) {
 			editing=true;
 		}
 	} else {
-		editing = true;		
-		
-	}	
-	var caller = $(e.currentTarget);
+		editing = true;	
+	}
+	var caller = clicked;
 	line = caller.closest("tr");
 	spinner.tackRight(line.find(".wlist-name"));
 	id = caller.attr("id").replace("edit-wlist-","");
-	
+	window.location.hash = "#edit="+id;
 	
 	$.ajax({ 
 	    type: 'POST', 
@@ -241,12 +258,11 @@ function editWlist(e) {
 			//do nothing right now
 	    }   
 	});
-	return false;
 }
 
 
-function deleteWlist(e) {
-	var caller = $(e.currentTarget);
+function deleteWlist(clicked) {
+	var caller = clicked;
 	var id = caller.attr("id").replace("delete-wlist-","");
 	line = caller.closest("tr");
 	var name = line.find(".wlist-name").text();
@@ -275,9 +291,28 @@ function deleteWlist(e) {
 			//throw notice
 		}
 	});
-	return false;
 }
 
-$("#create-wlist").click(createWlist);
-$("span.edit a").click(editWlist);
-$("span.trash a").click(deleteWlist);
+$("#create-wlist").click(function(e) {
+	createWlist();
+	e.preventDefault();
+});
+$("span.edit a").click(function(e){
+	editWlist($(this));
+	e.preventDefault();
+});
+$("span.trash a").click(function(e){
+	deleteWlist($(this));
+	e.preventDefault();
+});
+
+var hash = window.location.hash.substr(1);
+
+if (hash == 'new') {
+	createWlist();
+} else if (hash.indexOf('edit')==0) {
+	toEdit = hash.split("=")[1];
+	editWlist($("#edit-wlist-"+toEdit));
+	//split on = and open wlist with the id
+}
+
